@@ -1162,6 +1162,8 @@ class VectorSearchPartitionParamSource(VectorDataSetPartitionParamSource):
         self.filter_type = self.query_params.get(self.PARAMS_NAME_FILTER_TYPE)
         self.filter_body = self.query_params.get(self.PARAMS_NAME_FILTER_BODY)
         self.space_type = params.get(self.PARAMS_NAME_SPACE_TYPE, "l2")
+        self.filter_id_max = params.get("filter_id_max")
+        self.doc_ids = None
 
         if self.radial_search_type:
             self.radial_engine = params.get("radial_engine", "faiss")
@@ -1244,6 +1246,12 @@ class VectorSearchPartitionParamSource(VectorDataSetPartitionParamSource):
                 self.neighbors_data_set_format, self.neighbors_data_set_path, threshold_context)
             partition.threshold_data_set.seek(partition.offset)
 
+        if self.filter_id_max is not None:
+            id_data_set = get_data_set(
+                self.neighbors_data_set_format, self.neighbors_data_set_path, Context.ID)
+            # Load all doc IDs at once — 1D array indexed by doc index
+            partition.doc_ids = id_data_set.read(id_data_set.size())
+
         return partition
 
     def params(self):
@@ -1263,6 +1271,12 @@ class VectorSearchPartitionParamSource(VectorDataSetPartitionParamSource):
             raise StopIteration
         vector = self.data_set.read(1)[0]
         neighbor = self.neighbors_data_set.read(1)[0]
+
+        if self.filter_id_max is not None:
+            # Filter universal neighbor list to docs with id <= filter_id_max
+            valid = neighbor[neighbor >= 0]
+            filtered = valid[self.doc_ids[valid] <= self.filter_id_max]
+            neighbor = filtered
 
         if self.radial_search_type:
             true_neighbors = list(map(str, neighbor[:self.k].astype(int)))

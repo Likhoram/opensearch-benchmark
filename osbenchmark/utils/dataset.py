@@ -31,6 +31,7 @@ class Context(Enum):
     FAISS_MIN_SCORE = 9
     LUCENE_MAX_DISTANCE = 10
     LUCENE_MIN_SCORE = 11
+    ID = 12
 
 
 class DataSet(ABC):
@@ -168,6 +169,9 @@ class HDF5DataSet(DataSet):
 
         if context == Context.LUCENE_MIN_SCORE:
             return "lucene_min_score"
+
+        if context == Context.ID:
+            return "id"
 
         raise Exception("Unsupported context")
 
