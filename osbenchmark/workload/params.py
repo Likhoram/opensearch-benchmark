@@ -1248,12 +1248,13 @@ class VectorSearchPartitionParamSource(VectorDataSetPartitionParamSource):
 
         if self.filter_id_max is not None:
             id_data_set = get_data_set(
-                self.neighbors_data_set_format, self.neighbors_data_set_path, Context.ID)
-            partition.doc_ids = id_data_set.read(id_data_set.size())
+                self.neighbors_data_set_format, self.neighbors_data_set_path, Context.ATTRIBUTES)
+            # attributes shape is (N, 1) for id-based filter datasets — take first column
+            partition.doc_ids = id_data_set.read(id_data_set.size())[:, 0]
 
             # Pre-flight: verify all queries have >= k neighbors passing filter
             neighbors_check = get_data_set(
-                self.neighbors_data_set_format, self.neighbors_data_set_path, neighbors_context)
+                self.neighbors_data_set_format, self.neighbors_data_set_path, Context.NEIGHBORS)
             num_queries = neighbors_check.size()
             for i in range(num_queries):
                 row = neighbors_check.read(1)[0]
