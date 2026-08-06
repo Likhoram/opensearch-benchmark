@@ -1464,7 +1464,8 @@ class BulkVectorsFromDataSetParamSource(VectorDataSetPartitionParamSource):
         ):
             row = {self.field_name: vec}
             for idx, attribute_name in zip(range(len(self.filter_attributes)), self.filter_attributes):
-                attribute = attribute_list[idx].decode()
+                raw = attribute_list[idx]
+                attribute = raw.decode() if isinstance(raw, (bytes, bytearray)) else raw
                 if attribute != "None":
                     row.update({attribute_name : attribute})
             if add_id_field_to_body:
