@@ -1285,16 +1285,23 @@ class VectorSearchPartitionParamSource(VectorDataSetPartitionParamSource):
             raise StopIteration
         vector = self.data_set.read(1)[0]
         neighbor = self.neighbors_data_set.read(1)[0]
+        passing_mask = None
 
         if self.filter_id_max is not None:
             # Filter universal neighbor list to docs with id <= filter_id_max
-            valid = neighbor[neighbor >= 0]
-            filtered = valid[self.doc_ids[valid] <= self.filter_id_max]
-            neighbor = filtered
+            valid_mask = neighbor >= 0
+            passing_mask = valid_mask.copy()
+            passing_mask[valid_mask] = self.doc_ids[neighbor[valid_mask]] <= self.filter_id_max
+            neighbor = neighbor[passing_mask]
 
         if self.radial_search_type:
             true_neighbors = list(map(str, neighbor[:self.k].astype(int)))
             threshold_row = self.threshold_data_set.read(1)[0]
+            if passing_mask is not None:
+                # Threshold row mirrors the universal neighbor list; apply the
+                # same filter so index k-1 is the k-th passing neighbor's
+                # threshold — correct for this filter ratio.
+                threshold_row = threshold_row[passing_mask]
             threshold_value = float(threshold_row[self.k - 1])
             self.query_params[self.radial_search_type] = threshold_value
         elif self.k is not None:
